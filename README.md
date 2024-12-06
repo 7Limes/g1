@@ -45,7 +45,9 @@ Memory addresses are denoted with dollar signs (`$`) and use *decimal* numbers, 
 
 ### Memory
 - `mov [dest address] [src]`
-  - Moves value from `src` to `dest`
+  - Copies value from `src` to `dest address`
+- `movp [dest address] [src address]`
+  - Gets the value at address `src address` and copies it to `dest address`
 
 ### Math
 - `add [dest address] [a] [b]`
