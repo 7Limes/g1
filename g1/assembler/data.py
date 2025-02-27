@@ -102,5 +102,3 @@ def parse_data(data_entries: str, memory_size: int) -> list | None:
                 print(f'WARNING: Data overlap found between {spans[i]} and {spans[j]}.')
     
     return parsed_data
-        
-        

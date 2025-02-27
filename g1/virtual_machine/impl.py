@@ -10,6 +10,13 @@ import json
 import sys
 from tabulate import tabulate
 
+if __package__ is not None:
+    from ..binary.binary_format import SIGNATURE as BINARY_FORMAT_SIGNATURE, parse_to_program_data
+    from ..instructions.instructions import INSTRUCTIONS
+else:
+    print('Please run as a module.')
+    sys.exit(-1)
+
 os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = "hide"
 import pygame
 pygame.init()
@@ -108,32 +115,20 @@ def ins_line(program_context: ProgramContext, args: list[int|str]):
 def ins_rect(program_context: ProgramContext, args: list[int|str]):
     pygame.draw.rect(program_context.surface, program_context.color, (args[0], args[1], args[2], args[3]))
 
-def ins_print(_: ProgramContext, args: list[int|str]):
+def ins_log(_: ProgramContext, args: list[int|str]):
     print(args[0])
 
 
-INSTRUCTIONS = {
-    'mov': ins_mov,
-    'movp': ins_movp,
-    'add': ins_add,
-    'sub': ins_sub,
-    'mul': ins_mul,
-    'div': ins_div,
-    'mod': ins_mod,
+INSTRUCTION_FUNCTIONS = [
+    ins_mov, ins_movp,
+    ins_add, ins_sub, ins_mul, ins_div, ins_mod,
+    ins_less, ins_equal, ins_not,
+    ins_jmp,
+    ins_color, ins_point, ins_line, ins_rect,
+    ins_log
+]
 
-    'less': ins_less,
-    'equal': ins_equal,
-    'not': ins_not,
-
-    'jmp': ins_jmp,
-
-    'color': ins_color,
-    'point': ins_point,
-    'line': ins_line,
-    'rect': ins_rect,
-
-    'print': ins_print
-}
+INSTRUCTION_LOOKUP = {ins: func for ins, func in zip(INSTRUCTIONS, INSTRUCTION_FUNCTIONS)}
 
 
 def run_step_command(program_context: ProgramContext, command: str):
@@ -160,7 +155,7 @@ def start_program_thread(program_context: ProgramContext, index: int, step: bool
     while program_context.program_counter < len(instructions):
         instruction_name, instruction_args = instructions[program_context.program_counter][:2]  # only grab the first 2 in case of debug mode
         parsed_arguments = parse_arguments(program_context, instruction_args)
-        new_program_counter = INSTRUCTIONS[instruction_name](program_context, parsed_arguments)
+        new_program_counter = INSTRUCTION_LOOKUP[instruction_name](program_context, parsed_arguments)
         
         if step:
             if source_lines is not None:
@@ -223,19 +218,6 @@ def parse_flags(flags: str|None):
     return (pixel_size, show_fps, step)
 
 
-def run_file(file_path: str, flags: str):
-    json_string = None
-    with open(file_path, 'r') as f:
-        json_string = f.read()
-
-    run_string(json_string, flags)
-
-
-def run_string(json_string: str, flags: str):
-    program_data = json.loads(json_string)
-    run(program_data, flags)
-
-
 def run(program_data: dict, flags: str|None):
     """
     Run an assembled program.
@@ -284,6 +266,18 @@ def run(program_data: dict, flags: str|None):
         pygame.display.flip()
 
         delta_ms = clock.tick(tickrate)
+
+
+def run_file(file_path: str, flags: str):
+    program_data = None
+    with open(file_path, 'rb') as f:
+        file_content = f.read()
+        if file_content.startswith(BINARY_FORMAT_SIGNATURE):
+            program_data = parse_to_program_data(file_content)
+        else:
+            program_data = json.loads(file_content.decode())
+
+    run(program_data, flags)
 
 
 def main():
