@@ -5,7 +5,6 @@ By Miles Burkart
 https://github.com/7Limes
 """
 
-# TODO: ensure that all integers are in the range [-2^31, 2^31-1]
 
 import sys
 import os
@@ -51,6 +50,9 @@ ASSIGNMENT_INSTRUCTIONS = {'mov', 'movp', 'add', 'sub', 'mul', 'div', 'mod', 'le
 OUTPUT_FORMATS = Literal['json', 'g1b']
 DEFAULT_OUTPUT_FORMAT = 'json'
 
+INT_RANGE_LOWER = -2**31
+INT_RANGE_UPPER = 2**31-1
+
 
 def error(token: Token, source_lines: list[str], message: str):
     line_number = token.source_pos.lineno-1
@@ -83,11 +85,19 @@ def get_until_newline(tokens: list[Token]) -> list[Token]:
 
 def parse_argument_token(token: Token, labels: dict[str, int], source_lines: list[str]) -> str | int:
     if token.name == 'NUMBER':
-        return int(token.value)
+        parsed = int(token.value)
+        if parsed < INT_RANGE_LOWER or parsed > INT_RANGE_UPPER:
+            error(token, source_lines, f'Integer value {token.value} is outside the 32 bit signed integer range.')
+        return parsed
     if token.name == 'NAME':
         if token.value not in labels:
             error(token, source_lines, f'Undefined label "{token.value}".')
         return labels[token.value]
+    if token.name == 'ADDRESS':
+        parsed_address = int(token.value[1:])
+        if parsed_address < INT_RANGE_LOWER or parsed_address > INT_RANGE_UPPER:
+            error(token, source_lines, f'Address value {token.value} is outside the 32 bit signed integer range.')
+        return token.value
     return token.value
 
 
