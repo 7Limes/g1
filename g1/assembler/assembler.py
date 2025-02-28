@@ -53,22 +53,28 @@ DEFAULT_OUTPUT_FORMAT = 'json'
 INT_RANGE_LOWER = -2**31
 INT_RANGE_UPPER = 2**31-1
 
+COLOR_ERROR = '\x1b[31m'
+COLOR_WARN = '\x1b[33m'
+COLOR_RESET = '\x1b[0m'
+
 
 def error(token: Token, source_lines: list[str], message: str):
     line_number = token.source_pos.lineno-1
     column_number = token.source_pos.colno-1
-    print('ASSEMBLER ERROR:', message)
+    print(f'{COLOR_ERROR}ASSEMBLER ERROR: {message}')
     print(f'{line_number+1} | {source_lines[line_number]}')
     print(f'{" " * (len(str(line_number))+3+column_number)}^')
+    print(COLOR_RESET, end='')
     sys.exit()
 
 
 def warn(token: Token, source_lines: list[str], message: str):
     line_number = token.source_pos.lineno-1
     column_number = token.source_pos.colno-1
-    print('ASSEMBLER WARNING:', message)
+    print(f'{COLOR_WARN}ASSEMBLER WARNING: {message}')
     print(f'{line_number+1} | {source_lines[line_number]}')
     print(f'{" " * (len(str(line_number))+3+column_number)}^')
+    print(COLOR_RESET, end='')
 
 
 def get_until_newline(tokens: list[Token]) -> list[Token]:
