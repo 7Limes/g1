@@ -147,13 +147,17 @@ def run_step_command(program_context: ProgramContext, command: str):
         return None
 
 
-def start_program_thread(program_context: ProgramContext, index: int, step: bool=False):
+def start_program_thread(program_context: ProgramContext, index: int, step: bool=False, disable_log: bool=False):
     program_context.program_counter = index
     instructions = program_context.program_data['instructions']
     source_lines = program_context.program_data.get('source')
     step_amount = 0
     while program_context.program_counter < len(instructions):
         instruction_name, instruction_args = instructions[program_context.program_counter][:2]  # only grab the first 2 in case of debug mode
+        if disable_log and instruction_name == 'log':
+            program_context.program_counter += 1
+            continue
+        
         parsed_arguments = parse_arguments(program_context, instruction_args)
         new_program_counter = INSTRUCTION_LOOKUP[instruction_name](program_context, parsed_arguments)
         
@@ -204,18 +208,21 @@ def parse_flags(flags: str|None):
     pixel_size = 1
     show_fps = False
     step = False
+    disable_log = False
 
     if flags is not None:
         args = iter(flags.split())
         for value in args:
-            if value == '-s':
+            if value == '-scale':
                 pixel_size = int(next(args))
-            elif value == '-f':
+            elif value == '-show_fps':
                 show_fps = True
-            elif value == '-S':
+            elif value == '-step':
                 step = True
+            elif value == '-disable_log':
+                disable_log = True
 
-    return (pixel_size, show_fps, step)
+    return (pixel_size, show_fps, step, disable_log)
 
 
 def run(program_data: dict, flags: str|None):
@@ -226,7 +233,7 @@ def run(program_data: dict, flags: str|None):
         `-s [size]` -- Set the pixel size.\n
         `-f` -- Show framerate.\n
     """
-    pixel_size, show_fps, step = parse_flags(flags)
+    pixel_size, show_fps, step, disable_log = parse_flags(flags)
 
     width = program_data['meta']['width']
     height = program_data['meta']['height']
@@ -239,7 +246,7 @@ def run(program_data: dict, flags: str|None):
     program_context = ProgramContext(program_data, draw_surface, program_data.get('data'))
     if 'start' in program_data:
         update_reserved_memory(program_context, 0.0)
-        start_program_thread(program_context, program_data['start'], step)
+        start_program_thread(program_context, program_data['start'], step, disable_log)
 
     if 'tick' not in program_data:
         return
@@ -254,7 +261,7 @@ def run(program_data: dict, flags: str|None):
                 running = False
 
         update_reserved_memory(program_context, delta_ms)
-        start_program_thread(program_context, tick_label_index)
+        start_program_thread(program_context, tick_label_index, step=False, disable_log=disable_log)
 
         resized_draw_surface = pygame.transform.scale(draw_surface, (width*pixel_size, height*pixel_size))
         win.blit(resized_draw_surface, (0, 0))
@@ -284,7 +291,7 @@ def main():
     args = sys.argv
     flags = ''
     if len(args) == 1:
-        print('Usage: g1 [path] (-s [scale factor]|-f|-S)')
+        print('Usage: [program path] ((-show_fps) (-scale <value>) (-disable_log) (-step))')
         return
     if len(args) > 2:
         flags = ' '.join(args[2:])
