@@ -38,7 +38,7 @@ def parse_file(file_bytes: bytes, file_extension: str) -> list[int]:
     if file_extension.lower() in {'.png', '.jpg', '.bmp'}:
         img = Image.open(BytesIO(file_bytes))
         return img_to_simg(img)
-    return file_bytes.hex()
+    return list(file_bytes)
 
 
 # returns True if succeeded, False otherwise
@@ -73,6 +73,7 @@ def parse_data(data_entries: str, memory_size: int) -> list | None:
         
         elif data_type == 's':
             data_numbers = [ord(c) for c in data]
+            data_numbers.insert(0, len(data))
             if not add_data_entry(parsed_data, memory_size, line_number, [int(address_str), data_numbers]):
                 return None
         
@@ -83,7 +84,7 @@ def parse_data(data_entries: str, memory_size: int) -> list | None:
             with open(data, 'rb') as f:
                 file_bytes = f.read()
             if data_type == 'F':
-                parsed_data.append([int(address_str), file_bytes.hex()])
+                parsed_data.append([int(address_str), list(file_bytes)])
                 continue
             file_extension = os.path.splitext(data)[1]
             entry = [int(address_str), parse_file(file_bytes, file_extension)]
