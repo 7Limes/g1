@@ -19,7 +19,6 @@ else:
 
 os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = "hide"
 import pygame
-pygame.init()
 
 class G1PyException(Exception):
     pass
@@ -234,6 +233,8 @@ def run(program_data: dict, flags: str|None):
         `-f` -- Show framerate.\n
     """
     pixel_size, show_fps, step, disable_log = parse_flags(flags)
+
+    pygame.init()
 
     width = program_data['meta']['width']
     height = program_data['meta']['height']
