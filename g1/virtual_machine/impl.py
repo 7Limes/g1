@@ -8,7 +8,6 @@ https://github.com/7Limes
 import os
 import json
 import sys
-from tabulate import tabulate
 
 if __package__ is not None:
     from ..binary.binary_format import SIGNATURE as BINARY_FORMAT_SIGNATURE, parse_to_program_data
@@ -130,7 +129,19 @@ INSTRUCTION_FUNCTIONS = [
 INSTRUCTION_LOOKUP = {ins: func for ins, func in zip(INSTRUCTIONS, INSTRUCTION_FUNCTIONS)}
 
 
-def run_step_command(program_context: ProgramContext, command: str):
+def print_memory(memory: list[int], lower: int, upper: int):
+    max_length = max(max([len(str(memory[i])) for i in range(lower, upper)]), 5)
+    print('Address  ', end='')
+    for i in range(lower, upper):
+        print(f"{i:<{max_length+1}}", end='')
+    print()
+    print('Value    ', end='')
+    for i in range(lower, upper):
+        print(f"{memory[i]:<{max_length+1}}", end='')
+    print()
+
+
+def run_step_command(program_context: ProgramContext, command: str) -> int | None:
     if command.strip() == '':
         return 1
     command_split = command.strip().split()
@@ -139,10 +150,13 @@ def run_step_command(program_context: ProgramContext, command: str):
     if command == 'step':
         print(f'Stepping {int(args[0])}')
         return int(args[0])
-    if command == 'pm':
-        lower, upper = map(int, args[:2])
-        table = [list(range(lower, upper)), program_context.memory[lower:upper]]
-        print(tabulate(table, headers='firstrow'))
+    elif command == 'pm':
+        if len(args) == 1:
+            lower = int(args[0])
+            upper = lower+1
+        else:
+            lower, upper = map(int, args[:2])
+        print_memory(program_context.memory, lower, upper)
         return None
 
 
@@ -163,9 +177,9 @@ def start_program_thread(program_context: ProgramContext, index: int, step: bool
         if step:
             if source_lines is not None:
                 line_number = instructions[program_context.program_counter][2]
-                print(f'Running {program_context.program_counter}: {source_lines[line_number].lstrip()}')
+                print(f'Ran {program_context.program_counter}: {source_lines[line_number].lstrip()}')
             else:
-                print(f'Running {program_context.program_counter}: {instruction_name} {" ".join(map(str, instruction_args))}')
+                print(f'Ran {program_context.program_counter}: {instruction_name} {" ".join(map(str, instruction_args))}')
             if step_amount > 1:
                 step_amount -= 1
             else:
@@ -246,7 +260,7 @@ def run(program_data: dict, flags: str|None):
 
     program_context = ProgramContext(program_data, draw_surface, program_data.get('data'))
     if 'start' in program_data:
-        update_reserved_memory(program_context, 0.0)
+        update_reserved_memory(program_context, 0)
         start_program_thread(program_context, program_data['start'], step, disable_log)
 
     if 'tick' not in program_data:
