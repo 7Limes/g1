@@ -3,7 +3,7 @@ from typing import Any
 from construct.lib import Container, ListContainer
 from io import BytesIO
 
-from ..instructions.instructions import INSTRUCTIONS, ARGUMENT_COUNTS
+from g1.instructions.instructions import INSTRUCTIONS, ARGUMENT_COUNTS
 
 
 INSTRUCTION_IDS = {ins: i for i, ins in enumerate(INSTRUCTIONS)}
