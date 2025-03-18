@@ -11,6 +11,7 @@ import os
 import json
 from enum import Enum
 from typing import Literal
+import argparse
 from rply import LexerGenerator, Token, LexingError
 
 if __package__ is not None:
@@ -207,61 +208,34 @@ def assemble(input_path: str, output_path: str, data_file_path: str|None, debug:
         f.write(file_content)
 
 
-def parse_cli_flags(flags: str):
-    flags_split = iter(flags.split())
-    parsed_flags = {
-        'debug': False,
-        'format': None
-    }
-    for flag in flags_split:
-        if flag == '-d':
-            data_file_path = next(flags_split)
-            if not os.path.isfile(data_file_path):
-                raise FileNotFoundError(f'Could not find data file "{data_file_path}"')
-            parsed_flags['data'] = data_file_path
-        elif flag == '-dbg':
-            parsed_flags['debug'] = True
-        elif flag == '-f':
-            output_format = next(flags_split)
-            if output_format not in OUTPUT_FORMATS.__args__:
-                raise Exception(f'Got output format "{output_format}" but expected one of {OUTPUT_FORMATS.__args__}')
-            parsed_flags['format'] = output_format
-        else:
-            raise Exception(f'Got unrecognized flag "{flag}"')
-    return parsed_flags
-
-
 def main():
-    args = sys.argv
-    if len(args) == 1:
-        print('Usage: g1_assembler [infile] [outfile] (-d [data file]) (-dbg) (-f [output format])')
-        sys.exit(0)
-    elif len(args) == 2:
-        print('Expected outfile at argument 2.')
-        sys.exit(1)
-    if not os.path.isfile(args[1]):
-        print(f'Could not find file "{args[1]}"')
-        sys.exit(1)
-    
     try:
-        flags = parse_cli_flags(' '.join(args[3:]))
-        # Get format from output file extension
-        if flags.get('format') is None:
-            implied_format = os.path.splitext(args[2])[1].replace('.', '')
-            if implied_format in OUTPUT_FORMATS.__args__:
-                flags['format'] = implied_format
-            else:
-                flags['format'] = DEFAULT_OUTPUT_FORMAT
-        
-        assemble(args[1], args[2], flags.get('data'), flags.get('debug'), flags.get('format'))
-    
-    except StopIteration:
-        print('Expected argument after flag.')
-        sys.exit(2)
+        parser = argparse.ArgumentParser(description='Assemble a g1 program')
+        parser.add_argument('input_path', help='The path to the input g1 assembly program')
+        parser.add_argument('output_path', help='The path to the assembled g1 program')
+        parser.add_argument('--data_path', '-d', type=str, default=None, help='The path to a data file (.g1d) for the program')
+        parser.add_argument('--include_source', '-src', action='store_true', help='Include the source lines in the assembled program. Useful for debugging. Only works if the output format is .json')
+        parser.add_argument('--output_format', '-o', default=None, choices=['g1b', 'json'], help='The output format for the assembled program')
+        args = parser.parse_args()
     except Exception as e:
         print(e)
-        sys.exit(2)
+        return 1
+
+    if not os.path.isfile(args.input_path):
+        print(f'Could not find file "{args[1]}"')
+        return 2
+    
+    # Get format from output file extension
+    output_format = args.output_format
+    if output_format is None:
+        implied_format = os.path.splitext(args.output_path)[1].replace('.', '')
+        if implied_format in OUTPUT_FORMATS.__args__:
+            output_format = implied_format
+        else:
+            output_format = DEFAULT_OUTPUT_FORMAT
+    
+    assemble(args.input_path, args.output_path, args.data_path, args.include_source, output_format)
 
 
 if __name__ == '__main__':
-    main()
+    sys.exit(main())
