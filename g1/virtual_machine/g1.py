@@ -8,13 +8,9 @@ https://github.com/7Limes
 import os
 import json
 import sys
-
-if __package__ is not None:
-    from ..binary.binary_format import SIGNATURE as BINARY_FORMAT_SIGNATURE, parse_to_program_data
-    from ..instructions.instructions import INSTRUCTIONS
-else:
-    print('Please run as a module.')
-    sys.exit(-1)
+import argparse
+from g1.binary.binary_format import SIGNATURE as BINARY_FORMAT_SIGNATURE, parse_to_program_data
+from g1.instructions.instructions import INSTRUCTIONS
 
 os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = "hide"
 import pygame
@@ -216,29 +212,7 @@ def update_reserved_memory(program_context: ProgramContext, delta_ms: int):
     program_context.memory[0:len(values)] = values
 
 
-
-def parse_flags(flags: str|None):
-    pixel_size = 1
-    show_fps = False
-    step = False
-    disable_log = False
-
-    if flags is not None:
-        args = iter(flags.split())
-        for value in args:
-            if value == '-scale':
-                pixel_size = int(next(args))
-            elif value == '-show_fps':
-                show_fps = True
-            elif value == '-step':
-                step = True
-            elif value == '-disable_log':
-                disable_log = True
-
-    return (pixel_size, show_fps, step, disable_log)
-
-
-def run(program_data: dict, flags: str|None):
+def run(program_data: dict, render_scale: int=1, show_fps: bool=False, enable_step: bool=False, disable_log: bool=False):
     """
     Run an assembled program.
 
@@ -246,14 +220,12 @@ def run(program_data: dict, flags: str|None):
         `-s [size]` -- Set the pixel size.\n
         `-f` -- Show framerate.\n
     """
-    pixel_size, show_fps, step, disable_log = parse_flags(flags)
-
     pygame.init()
 
     width = program_data['meta']['width']
     height = program_data['meta']['height']
     tickrate = program_data['meta']['tickrate']
-    win = pygame.display.set_mode((width*pixel_size, height*pixel_size))
+    win = pygame.display.set_mode((width*render_scale, height*render_scale))
     draw_surface = pygame.Surface((width, height))
     pygame.display.set_caption('g1py')
     font = pygame.font.SysFont('Arial', 15)
@@ -261,7 +233,7 @@ def run(program_data: dict, flags: str|None):
     program_context = ProgramContext(program_data, draw_surface, program_data.get('data'))
     if 'start' in program_data:
         update_reserved_memory(program_context, 0)
-        start_program_thread(program_context, program_data['start'], step, disable_log)
+        start_program_thread(program_context, program_data['start'], enable_step, disable_log)
 
     if 'tick' not in program_data:
         return
@@ -278,7 +250,7 @@ def run(program_data: dict, flags: str|None):
         update_reserved_memory(program_context, delta_ms)
         start_program_thread(program_context, tick_label_index, step=False, disable_log=disable_log)
 
-        resized_draw_surface = pygame.transform.scale(draw_surface, (width*pixel_size, height*pixel_size))
+        resized_draw_surface = pygame.transform.scale(draw_surface, (width*render_scale, height*render_scale))
         win.blit(resized_draw_surface, (0, 0))
 
         if show_fps:
@@ -290,7 +262,7 @@ def run(program_data: dict, flags: str|None):
         delta_ms = clock.tick(tickrate)
 
 
-def run_file(file_path: str, flags: str):
+def run_file(file_path: str, render_scale: int=1, show_fps: bool=False, enable_step: bool=False, disable_log: bool=False):
     program_data = None
     with open(file_path, 'rb') as f:
         file_content = f.read()
@@ -299,18 +271,19 @@ def run_file(file_path: str, flags: str):
         else:
             program_data = json.loads(file_content.decode())
 
-    run(program_data, flags)
+    run(program_data, render_scale, show_fps, enable_step, disable_log)
 
 
 def main():
-    args = sys.argv
-    flags = ''
-    if len(args) == 1:
-        print('Usage: [program path] ((-show_fps) (-scale <value>) (-disable_log) (-step))')
-        return
-    if len(args) > 2:
-        flags = ' '.join(args[2:])
-    run_file(args[1], flags)
+    parser = argparse.ArgumentParser(description='Run a g1 program')
+    parser.add_argument('program_path', help='Path to the g1 program')
+    parser.add_argument('--show_fps', '-fps', action='store_true', help='Display frames per second while the program is running')
+    parser.add_argument('--scale', '-s', type=int, default=1, help='Set the render scale for the program window')
+    parser.add_argument('--enable_step', '-S', action='store_true', help='Enable step mode for debugging')
+    parser.add_argument('--disable_log', '-dl', action='store_true', help='Disable the log instruction. Disables messages being printed to stdout')
+    args = parser.parse_args()
+    
+    run_file(args.program_path, args.scale, args.show_fps, args.enable_step, args.disable_log)
 
 
 if __name__ == '__main__':
