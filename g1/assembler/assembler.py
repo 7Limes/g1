@@ -13,14 +13,9 @@ from enum import Enum
 from typing import Literal
 import argparse
 from rply import LexerGenerator, Token, LexingError
-
-if __package__ is not None:
-    from .data import parse_data
-    from ..binary.binary_format import G1BinaryFormat, format_json
-    from ..instructions.instructions import INSTRUCTIONS, ARGUMENT_COUNT_LOOKUP
-else:
-    print('Please run as a module.')
-    sys.exit(-1)
+from g1.assembler.data import parse_data
+from g1.binary.binary_format import G1BinaryFormat, format_json
+from g1.instructions.instructions import INSTRUCTIONS, ARGUMENT_COUNT_LOOKUP, ASSIGNMENT_INSTRUCTIONS
 
 
 class AssemblerState(Enum):
@@ -45,8 +40,6 @@ META_VARIABLES = {
     'height': 100,
     'tickrate': 60
 }
-
-ASSIGNMENT_INSTRUCTIONS = {'mov', 'movp', 'add', 'sub', 'mul', 'div', 'mod', 'less', 'equal', 'not'}
 
 OUTPUT_FORMATS = Literal['json', 'g1b']
 DEFAULT_OUTPUT_FORMAT = 'json'
