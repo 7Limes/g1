@@ -112,6 +112,14 @@ def ins_rect(program_context: ProgramContext, args: list[int|str]):
 def ins_log(_: ProgramContext, args: list[int|str]):
     print(args[0])
 
+def ins_getp(program_context: ProgramContext, args: list[int|str]):
+    try:
+        pixel = program_context.surface.get_at((args[1], args[2]))
+        pixel_int = (pixel.b << 16) | (pixel.g << 8) | pixel.r
+        memset(program_context, args[0], pixel_int)
+    except IndexError:
+        memset(program_context, args[0], -1)
+
 
 INSTRUCTION_FUNCTIONS = [
     ins_mov, ins_movp,
@@ -119,7 +127,8 @@ INSTRUCTION_FUNCTIONS = [
     ins_less, ins_equal, ins_not,
     ins_jmp,
     ins_color, ins_point, ins_line, ins_rect,
-    ins_log
+    ins_log,
+    ins_getp
 ]
 
 INSTRUCTION_LOOKUP = {ins: func for ins, func in zip(INSTRUCTIONS, INSTRUCTION_FUNCTIONS)}
