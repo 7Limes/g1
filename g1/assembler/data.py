@@ -9,7 +9,7 @@ from io import BytesIO
 
 
 DATA_LINE_REGEX = r'^(\d+) ([fFbs]) (.+)$'
-HEX_REGEX = r'([0-9a-fA-F]{2})+$'
+HEX_REGEX = r'(:?[0-9a-fA-F]{2})+$'
 
 
 class G1DataParserException(Exception):
